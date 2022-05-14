@@ -1,4 +1,5 @@
 import { SerialPort } from "serialport";
+import { MessageId } from "./definitions";
 import { getPacketBytes, IMessage } from "./packet";
 import { getNextPacket } from "./utils";
 
@@ -46,11 +47,16 @@ export const outLoop = (port: SerialPort) => {
 
     // Transform packet into bytes to send
     const bytes = getPacketBytes(packet);
-    // console.log("bytes", bytes);
+    console.log("bytes", bytes);
 
     // Send the bytes
     port.write(bytes);
 
-    confirm = msg.msgId;
+    // We dont confirm confirmations, that would be crazy
+    if (msg.msgId !== MessageId.CONFIRM_MESSAGE) {
+      confirm = msg.msgId;
+    } else {
+      messageQueue.splice(0, 1);
+    }
   }
 };

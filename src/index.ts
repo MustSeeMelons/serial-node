@@ -1,8 +1,13 @@
-import { SerialPort } from "serialport";
+import { PacketLengthParser, SerialPort } from "serialport";
 import { PortInfo } from "serialport/index";
-import { getConfigRequestMessage, getLargeMessage } from "./packet";
+import {
+  getConfigRequestMessage,
+  getConfirmMessage,
+  getLargeMessage,
+} from "./packet";
 import { processChunk } from "./chunk-processor";
 import { outLoop, addMessage, addConfirm } from "./out";
+import { MessageId } from "./definitions";
 
 const vendorId = "2886";
 const productId = "802f";
@@ -49,11 +54,12 @@ const main = async () => {
     const packet = processChunk(chunk);
     packet && console.log("recieved", packet);
 
-    // TODO accumulate packets into mesasge
-
-    if (packet && packet.msgId == 42) {
+    if (packet && packet.msgId == MessageId.CONFIRM_MESSAGE) {
       // data[0] has the id of the message we are confirming
       addConfirm(packet.data[0]);
+    } else if (packet && packet.packetCount > 1) {
+      const msg = getConfirmMessage(packet.msgId);
+      addMessage(msg);
     }
   });
 

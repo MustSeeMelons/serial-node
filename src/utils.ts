@@ -31,6 +31,8 @@ export const getNextPacket = (msg: IMessage) => {
   }
 
   msg.nextIndex += packet.dataLength;
+  packet.packetNum = msg.lastPacketNumber;
+  msg.lastPacketNumber++;
 
   setPacketChecksum(packet);
 

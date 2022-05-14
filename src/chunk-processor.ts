@@ -38,6 +38,7 @@ export const parsePacket = (): IPacket | undefined => {
     checksum === undefined
   ) {
     // Don't have a valid packet yet
+    // XXX recursivly check more indexes?
     return;
   }
 
