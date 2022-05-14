@@ -1,7 +1,8 @@
 import { SerialPort } from "serialport";
 import { PortInfo } from "serialport/index";
-import { getConfigRequestPacket, getPacketBytes } from "./packet";
+import { getConfigRequestMessage, getLargeMessage } from "./packet";
 import { processChunk } from "./chunk-processor";
+import { outLoop, addMessage, addConfirm } from "./out";
 
 const vendorId = "2886";
 const productId = "802f";
@@ -47,14 +48,26 @@ const main = async () => {
   port.on("data", (chunk) => {
     const packet = processChunk(chunk);
     packet && console.log("recieved", packet);
+
+    // TODO accumulate packets into mesasge
+
+    if (packet && packet.msgId == 42) {
+      // data[0] has the id of the message we are confirming
+      addConfirm(packet.data[0]);
+    }
   });
 
-  // Send config request
-  const cfgPacket = getConfigRequestPacket();
-  console.log("sending", cfgPacket);
-  const bytes = getPacketBytes(cfgPacket);
-  console.log("bytes", bytes);
-  port.write(bytes);
+  setInterval(() => {
+    outLoop(port);
+  }, 100);
+
+  // Asking for config
+  const msg = getConfigRequestMessage();
+  addMessage(msg);
+
+  // Sending a large message
+  const largeMsg = getLargeMessage();
+  addMessage(largeMsg);
 };
 
 main();

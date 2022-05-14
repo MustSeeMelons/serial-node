@@ -1,6 +1,9 @@
+import { setPacketChecksum } from "./utils";
+import { MessageId } from "./definitions";
+
 export const PACKET_SIZE = 16;
 
-const DATA_MAX = PACKET_SIZE - 5;
+export const DATA_MAX = PACKET_SIZE - 5;
 const MESSAGE_DATA_MAX = 255;
 
 // Packet data indexes
@@ -20,24 +23,59 @@ export interface IPacket {
   checksum: number; // Checksum of the packet
 }
 
-export const getConfigRequestPacket = (): IPacket => {
+export interface IMessage {
+  msgId: number;
+  dataLength: number;
+  lastPacketNumber: number;
+  totalPacketCount: number;
+  nextIndex: number;
+  data: number[];
+}
+
+export const getConfigRequestMessage = () => {
+  const data: number[] = ["c".charCodeAt(0), "\\n".charCodeAt(0)];
+
+  const message: IMessage = {
+    msgId: MessageId.CONFIG_REQUEST,
+    lastPacketNumber: 0,
+    totalPacketCount: Math.ceil(data.length / PACKET_SIZE),
+    data,
+    dataLength: data.length,
+    nextIndex: 0,
+  };
+
+  return message;
+};
+
+export const getLargeMessage = () => {
+  const data: number[] = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    21, 21, 22, 23, 24, 25, 26, 27, 28, 29, 39,
+  ];
+
+  const message: IMessage = {
+    msgId: MessageId.BTN_UPDATE,
+    lastPacketNumber: 0,
+    totalPacketCount: Math.ceil(data.length / PACKET_SIZE),
+    data,
+    dataLength: data.length,
+    nextIndex: 0,
+  };
+
+  return message;
+};
+
+export const getConfirmPacket = (msgId: number): IPacket => {
   const packet: IPacket = {
-    msgId: 1,
+    msgId: 69,
     packetNum: 0,
     packetCount: 1,
-    dataLength: 2,
-    data: ["c".charCodeAt(0), "\\n".charCodeAt(0)],
+    dataLength: 1,
+    data: [msgId],
     checksum: 0,
   };
 
-  packet.checksum ^= packet.msgId;
-  packet.checksum ^= packet.packetCount;
-  packet.checksum ^= packet.packetNum;
-  packet.checksum ^= packet.dataLength;
-
-  for (let i = 0; i < packet.dataLength; i++) {
-    packet.checksum ^= packet.data[i];
-  }
+  setPacketChecksum(packet);
 
   return packet;
 };
