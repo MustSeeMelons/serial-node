@@ -1,16 +1,26 @@
-import { PacketLengthParser, SerialPort } from "serialport";
+import { SerialPort } from "serialport";
 import { PortInfo } from "serialport/index";
 import {
+  getButtonUpdateMessage,
   getConfigRequestMessage,
   getConfirmMessage,
-  getLargeMessage,
 } from "./packet";
 import { processChunk } from "./chunk-processor";
 import { outLoop, addMessage, addConfirm } from "./out";
 import { MessageId } from "./definitions";
+import {
+  addPacket,
+  clearIncomingMessage,
+  isIncomingMessageComplete,
+  getIncomingMessage,
+} from "./in";
 
 const vendorId = "2886";
 const productId = "802f";
+
+// For retry testing HW
+let failCounter = 0;
+const failMax = 0;
 
 const getPort = async () => {
   const portInfo = await SerialPort.list();
@@ -52,28 +62,54 @@ const main = async () => {
 
   port.on("data", (chunk) => {
     const packet = processChunk(chunk);
+
     packet && console.log("recieved", packet);
 
-    if (packet && packet.msgId == MessageId.CONFIRM_MESSAGE) {
-      // data[0] has the id of the message we are confirming
+    if (!packet) {
+      return;
+    }
+
+    // Transform packet into a message
+    addPacket(packet);
+
+    // Get current message
+    const incomingMessage = getIncomingMessage();
+
+    if (incomingMessage.msgId === MessageId.CONFIRM_MESSAGE) {
+      // Pass confirm to our out loop
       addConfirm(packet.data[0]);
-    } else if (packet && packet.packetCount > 1) {
-      const msg = getConfirmMessage(packet.msgId);
-      addMessage(msg);
+      // No confirmation needed, just clear the incoming message
+      clearIncomingMessage();
+    } else {
+      // Send confirmation for the packet
+      if (failCounter < failMax) {
+        failCounter++;
+        console.log(`not confirming: ${failCounter} < ${failMax}`);
+        return;
+      }
+
+      failCounter = 0;
+
+      // Sending confirm that we got this packet
+      const confirmMessage = getConfirmMessage(packet.msgId);
+      addMessage(confirmMessage);
+
+      if (isIncomingMessageComplete()) {
+        console.log("incoming message", incomingMessage);
+
+        // Here we would do stuff and then reset the message
+        clearIncomingMessage();
+      }
     }
   });
 
   setInterval(() => {
     outLoop(port);
-  }, 100);
+  }, 50);
 
   // Asking for config
   const msg = getConfigRequestMessage();
   addMessage(msg);
-
-  // Sending a large message
-  const largeMsg = getLargeMessage();
-  addMessage(largeMsg);
 };
 
 main();

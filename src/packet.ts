@@ -80,6 +80,25 @@ export const getLargeMessage = () => {
   return message;
 };
 
+export const getButtonUpdateMessage = (config: number[]) => {
+  const data: number[] = config;
+
+  data[3] = 69;
+  data[18] = 42;
+  data[33] = 7;
+
+  const message: IMessage = {
+    msgId: MessageId.BTN_UPDATE,
+    lastPacketNumber: 0,
+    totalPacketCount: Math.ceil(data.length / DATA_MAX),
+    data,
+    dataLength: data.length,
+    nextIndex: 0,
+  };
+
+  return message;
+};
+
 export const getConfirmPacket = (msgId: number): IPacket => {
   const packet: IPacket = {
     msgId: 69,
@@ -95,7 +114,7 @@ export const getConfirmPacket = (msgId: number): IPacket => {
   return packet;
 };
 
-export const getPacketBytes = (packet: IPacket) => {
+export const getPacketBytes = (packet: IPacket): number[] => {
   const arr = [];
 
   arr.push(packet.msgId);

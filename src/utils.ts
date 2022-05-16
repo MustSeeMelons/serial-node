@@ -38,3 +38,7 @@ export const getNextPacket = (msg: IMessage) => {
 
   return packet;
 };
+
+export const getCurrentMillis = () => {
+  return new Date().getTime();
+};
